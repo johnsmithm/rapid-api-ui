@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Image to JSON</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.2/dropzone.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.2/dropzone.js"></script>
+  <style>
+    #drop-zone {
+        border: 2px dashed #aaa;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 20px;
+        background-color: #f9f9f9;
+    }
+    .file-info {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+</style>
+</head>
+<body>
+
+<h2>Extract any JSON format from any image with AI</h2>
+<p>Indicate the fields you want to extract, the description, RapidAPI API key, and upload images you want to process</p>
+
+<form id="configForm">
+  <label for="apiKey">Rapid API Key(<a href="https://rapidapi.com/moshnoi2000-46FTkD0nFtO/api/image2json" target="blank">get it here</a>):</label>
+  <input type="password" id="apiKey" name="apiKey">
+  <p>Indicate the fields schema</p>
+  <div class="inline-form d-flex align-items-center mb-3">
+    <!-- Text Input for Field Name -->
+    <div class="form-group mr-2">
+        <input type="text" class="form-control" placeholder="Field Name">
+    </div>
+
+    <!-- Select Box for Field Type -->
+    <div class="form-group mr-2">
+        <select class="form-control">
+            <option value="number">Number</option>
+            <option value="string">String</option>
+        </select>
+    </div>
+
+    <!-- Text Input for Description -->
+    <div class="form-group mr-2">
+        <input type="text" class="form-control" placeholder="Description">
+    </div>
+
+    <!-- Add Field Button -->
+    <button type="button" id="addField" class="btn btn-primary">Add Field</button>
+</div>
+  
+</form>
+
+<table id="fieldsTable" class="table">
+  <thead>
+    <tr>
+      <th>Field Name</th>
+      <th>Field Type</th>
+      <th>Description</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- Rows will be added here -->
+  </tbody>
+</table>
+
+
+<button id="loadSchema">Load Schema</button>
+<button id="saveSchema">Save Schema</button>
+
+ 
+
+    <div id="drop-zone">
+        Drag and drop some images here, or use the upload button
+        <input type="file" id="file-input" class="d-none" multiple>
+        <label for="file-input" class="btn btn-secondary mt-2">Upload Button</label>
+    </div>
+
+<div id="file-list">
+    	
+    </div>
+
+<button id="submitBtn">Submit</button>
+
+<!-- Tabs -->
+<ul class="nav nav-tabs" id="myTabs" role="tablist">
+  <li class="nav-item">
+    <a class="nav-link active" id="table-tab" data-toggle="tab" href="#table" role="tab">Table</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" id="json-tab" data-toggle="tab" href="#json" role="tab">JSON</a>
+  </li>
+</ul>
+
+<!-- Tab Content -->
+<div class="tab-content" id="myTabContent">
+  <div class="tab-pane fade show active" id="table" role="tabpanel">
+    <table id="responseTable" class="table">
+      <thead>
+        <tr>
+          <th>Field</th>
+          <th>Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Table data will be populated here -->
+      </tbody>
+    </table>
+    <button id="downloadTableAsCsv">Download as CSV</button>
+  </div>
+  <div class="tab-pane fade" id="json" role="tabpanel">
+    <pre id="responseJson"></pre>
+    <button id="downloadJson">Download as JSON</button>
+  </div>
+</div>
+
+<br/>
+Want to train a custom document processing model?
+<br/>
+Get in touch: 
+<a href="https://www.linkedin.com/in/ionmosnoi/" target="blank">linkedin</a>|
+<a href="https://twitter.com/ionmosnoi" target="blank">twitter</a>|
+<a href="https://beacons.ai/ion.mosnoi" target="blank">linktree</a>|
+
+<script>
+const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const fileList = document.getElementById('file-list');
+    const addButton = document.getElementById('add-button');
+    const uploadStatus = document.getElementById('upload-status');
+    let files = [];
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('bg-secondary');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('bg-secondary');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+	if(!checkIfOnlyImages(e.dataTransfer.files)){
+		alert('upload only images');
+		return;
+	}
+        dropZone.classList.remove('bg-secondary');
+        files.push(...e.dataTransfer.files);
+        updateFileList();
+    });
+
+	fileInput.addEventListener('change', () => {
+	if(!checkIfOnlyImages(fileInput.files)){
+		alert('upload only images');
+		return;
+	}
+        files.push(...fileInput.files);
+        updateFileList();
+    });
+
+function checkIfOnlyImages(fileList) {
+  for (let i = 0; i < fileList.length; i++) {
+    const file = fileList[i];
+    
+    // Check if the file type starts with "image/"
+    if (!file.type.startsWith('image/')) {
+      return false;
+    }
+  }
+  return true;
+}
+
+  function updateFileList() {
+        fileList.innerHTML = 'To Upload:<br>';
+        files.forEach((file, index) => {
+            const fileInfo = document.createElement('div');
+            fileInfo.classList.add('file-info');
+            fileInfo.innerHTML = `
+                ${file.name}
+                <button class="btn btn-sm btn-danger" onclick="removeFile(${index})">X</button>
+            `;
+            fileList.appendChild(fileInfo);
+        });
+    }
+
+    function removeFile(index) {
+        files.splice(index, 1);
+        updateFileList();
+    }
+
+function getTableDataAsJson() {
+  let jsonFormat = {};
+  
+  // Iterate over each row in the table body
+  $("#fieldsTable tbody tr").each(function() {
+    let fieldName = $(this).find("td:eq(0)").text().trim();
+    let fieldType = $(this).find("td:eq(1)").text().trim();
+    let fieldDesc = $(this).find("td:eq(2)").text().trim();
+    
+    jsonFormat[fieldName] = `${fieldType} - ${fieldDesc}`;
+  });
+  
+  return jsonFormat;
+}
+
+function fileToBase64(file, callback) {
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = function() {
+    const base64Data = reader.result.split(',')[1];  // Remove the data URL header
+    callback(base64Data);
+  };
+  reader.onerror = function(error) {
+    console.log('Error: ', error);
+  };
+}
+
+function populateTabs(response) {
+  // Clear existing data
+  $("#responseTable tbody").empty();
+  $("#responseJson").empty();
+
+  // Populate Table
+  let structuredData = response.structured_data;
+  for (let key in structuredData) {
+    let row = `<tr><td>${key}</td><td>${structuredData[key]}</td></tr>`;
+    $("#responseTable tbody").append(row);
+  }
+
+  // Populate JSON
+  let jsonStr = JSON.stringify(structuredData, null, 2);
+  $("#responseJson").text(jsonStr);
+}
+
+
+  $(document).ready(function() {
+    // Dropzone
+    //let myDropzone = new Dropzone("#myDropzone", { url: "/upload" });
+    
+    // Add Field Button
+	$("#addField").click(function() {
+	  let fieldName = $("<td>").text($("#configForm input[placeholder='Field Name']").val());
+	  let fieldType = $("<td>").text($("#configForm select").val());
+	  let fieldDesc = $("<td>").text($("#configForm input[placeholder='Description']").val());
+	  let deleteBtn = $("<button>").text("X").addClass("deleteBtn");
+	  
+	  let row = $("<tr>")
+		    .append(fieldName)
+		    .append(fieldType)
+		    .append(fieldDesc)
+		    .append($("<td>").append(deleteBtn));
+	  
+	  $("#fieldsTable tbody").append(row);
+	  
+	  // Reset input fields
+	  $("#configForm input[placeholder='Field Name']").val('');
+	  $("#configForm select").val('number');
+	  $("#configForm input[placeholder='Description']").val('');
+	});
+
+	// Delete Button
+	$(document).on("click", ".deleteBtn", function() {
+	  $(this).closest("tr").remove();
+	});
+
+    // Load and Save Schema Buttons
+    $("#loadSchema").click(function() {
+      // Load JSON schema
+    });
+    
+    $("#saveSchema").click(function() {
+      // Save JSON schema
+    });
+
+
+
+    // Submit Button
+    $("#submitBtn").click(function() {
+      let image_base64 = "";  // Replace with actual base64 data
+      
+      let headers = {
+        "Content-Type": "application/json",
+        "X-RapidAPI-Key": $("#apiKey").val(),
+        "X-RapidAPI-Host": "image2json.p.rapidapi.com"
+      };
+      // Convert the first file to a base64 string
+	  fileToBase64(files[0], function(base64Data) {
+	    console.log("Base64 Data: ", base64Data);
+	    // You can use base64Data here
+	 	let payload = {
+			image: base64Data,
+			jsonformat: getTableDataAsJson()
+		      };
+		//console.log(base64Data)
+			//return;
+		var url = "https://image2json.p.rapidapi.com/";
+
+		$("#responseTable tbody").html("loading...");
+	      // Make POST request (Assume variable 'url' contains the target URL)
+	      $.ajax({
+		url: url,
+		method: "POST",
+		data: JSON.stringify(payload),
+		headers: headers,
+		success: function(response) {
+		  // Handle the response
+			console.log(response)
+				populateTabs(response)
+		}
+	      });
+
+	 });
+    });
+  });
+</script>
+
+</body>
+</html>
+
