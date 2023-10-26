@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Testeaza incararea in Saga</title>
+  <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+<style>
+  /* Add these styles to make the datepicker background visible */
+  .ui-datepicker {
+    background-color: #fff;
+    z-index: 1000; /* To appear over other elements */
+	display: none;
+  }
+</style>
+
+</head>
+<body>
+
+  <div class="container mt-5">
+    <h1 class="text-center">Testeaza incararea in Saga</h1>
+    <h4  class="text-center">Selecteaza datele si primeste xml de import in Saga</h4>
+    
+    <label>Tip Articole</label>
+    <select id="tipArticole">
+      <option value="00">Nir cu pret vanzare</option>
+      <option value="01">Marfuri</option>
+ <option value="02">Materii prime</option>
+  <option value="03">Materiale auxiliare</option>
+  <option value="14">Conbustibili</option>
+  <option value="15">Piese de schimb</option>
+  <option value="06">Obiecte de inventar</option>
+  <option value="16">Alte mat. consumabile</option>
+  <option value="08">Semifabricate</option>
+  <option value="09">Amenajari provizorii</option>
+      <!-- Add more options here -->
+    </select>
+    
+    <label>Furnizor</label>
+    <select id="furnizor">
+      <option value="ro423423" selected>Metro</option>
+      <option value="ro4323423">Kauland</option>
+    </select>
+
+    <label>Data eliberare</label>
+    <input type="text" id="dataEliberare">
+
+    <label>Numar factura</label>
+    <input type="text" id="numarFactura" value="12345">
+
+    <label>Cod Gestiune(3 cifre)</label>
+    <input type="text" id="codGestiune">
+
+    <label>Cont</label>
+    <input type="text" id="cont">
+    
+    <label>Nr de articole</label>
+    <select id="nrArticole">
+      <option>5</option>
+      <option>1</option>
+      <option>2</option>
+      <option>3</option>
+      <option>10</option>
+      <!-- Add more options here -->
+    </select>
+    
+    <table id="dataTable" class="table">
+      <!-- Table headers and rows will be generated here -->
+    </table>
+
+	<div id="afterTable">
+      <!-- Table headers and rows will be generated here -->
+    </div>
+    
+    <button id="descarcaXML">Descarca xml</button>
+  </div>
+  
+  <script>
+	var c2f={'ro423423':"metro",'ro4323423':'kauland'}
+    $(document).ready(function() {
+  // Initialize datepicker
+  $("#dataEliberare").datepicker({
+    dateFormat: "dd.mm.yy"
+  }).datepicker("setDate", new Date());
+
+  function generateTable() {
+    let rowsCount = $("#nrArticole").val();  // Get the number of rows from select box
+    let tableHeaders = "<tr><th>Nr</th><th>Articol</th><th>Unitate masura</th><th>cantitate</th><th>pret unitar</th><th>cota tva</th><th>valoare fara tva</th><th>valoare tva</th><th>valoare cu tva</th>";
+    if ($("#tipArticole").val() === "00") {
+      tableHeaders += "<th>pret vanzare</th>";
+    }
+    tableHeaders += "</tr>";
+    $("#dataTable").html(tableHeaders);
+
+    for (let i = 1; i <= rowsCount; i++) {
+	var cant = Math.floor(Math.random() * 100)+1;
+	var pret = Math.floor(Math.random() * 100)+1;
+	var myArray = [5, 9, 19];
+	var randomIndex = Math.floor(Math.random() * myArray.length);
+	var cota = 19;// myArray[randomIndex];
+	if(i%4==0){
+		cota = 9;
+	}
+	var tva = ((pret*cant)/100*cota).toFixed(2);
+
+
+// Calculate the value as a percentage of 100
+      let row = `<tr><td>${i}</td><td>Articol${i}${$("#tipArticole").val()}</td><td>UM${i}</td><td>${cant}</td><td>${pret}</td><td>${cota}</td><td>${pret*cant}</td><td>${tva}</td><td>${tva+pret*cant}</td>`;
+      if ($("#tipArticole").val() === "00") {
+        row += `<td>${Math.floor(pret + pret*0.1)}</td>`;
+      }
+      row += '</tr>';
+      $("#dataTable").append(row);
+    }
+	if ($("#tipArticole").val() != "00") {
+        	$("#afterTable").html(`Meniu diverse..import date..import xml..alegeti mapa unde ati descarcat fisierele xml..import <br/>Incarcati mai intai fisierele dbf apoi xml(alegeti optiunea MS dos cand veti incarca fisierul dbf) <br>
+<a href="dbf/Articole_01-10-2022_22-10-2024 ${$("#tipArticole").val()}_${$("#nrArticole").val()}.dbf">Descarca fisierul dbf </a><br>`);;
+      }else{
+	$("#afterTable").html('Meniu diverse..import date..import xml..alegeti mapa unde ati descarcat fisierele xml..import <br/>');
+	}
+  }
+
+  generateTable();
+
+  $("#tipArticole, #nrArticole").change(function() {
+    generateTable();
+  });
+
+
+  $("#descarcaXML").click(function() {
+
+var fac = `<Facturi>
+<Factura>
+<Antet>
+<ClientAdresa/>
+<ClientBanca/>
+<ClientCIF/>
+<ClientIBAN/>
+<ClientInformatiiSuplimentare> </ClientInformatiiSuplimentare>
+<ClientNrRegCom/>
+<ClientNume/>
+<FurnizorAdresa/>
+<FurnizorBanca/>
+<FurnizorCIF>${$("#furnizor").val()}</FurnizorCIF>
+<FurnizorCapital/>
+<FurnizorIBAN/>
+<FurnizorInformatiiSuplimentare/>
+<FurnizorNrRegCom/>
+<FurnizorNume>${c2f[$("#furnizor").val()]}</FurnizorNume>
+<FacturaCotaTVA/>
+<FacturaData>${$("#dataEliberare").val()}</FacturaData>
+<FacturaGreutate/>
+<FacturaInformatiiSuplimentare/>
+<FacturaMoneda>RON</FacturaMoneda>
+<FacturaNumar>${$("#numarFactura").val()}</FacturaNumar>
+<FacturaScadenta/>
+<FacturaTVAIncasare/>
+<FacturaTaxareInversa/>
+<FacturaTip>C</FacturaTip>
+</Antet>
+<Detalii>
+<Continut>
+`;
+
+    let tableData = [];
+	var nr = 0;
+    $("#dataTable tr").each(function(row, tr) {
+	;
+      if (row === 0) return;  // Skip header row
+nr+=1
+      let rowData = {};
+      $(tr).find('td').each(function(col, td) {
+        let header = $("#dataTable th").eq(col).text();
+        rowData[header] = $(td).text();
+      });
+      tableData.push(rowData);
+	var linie = `<Linie>
+<LinieNrCrt>${nr}</LinieNrCrt>
+<Gestiune>${$("#codGestiune").val()}</Gestiune>
+<Activitate/>
+<Descriere>${rowData["Articol"]}</Descriere>
+<CodArticolFurnizor>bh${nr}0${$("#tipArticole").val()}</CodArticolFurnizor>
+<CodArticolClient/>
+<CodBare/>
+<PretVanzare/>
+<InformatiiSuplimentare/>
+<UM>${rowData["Unitate masura"]}</UM>
+<Cantitate>${rowData["cantitate"]}</Cantitate>
+<Pret/>
+<Valoare>${rowData["valoare fara tva"]}</Valoare>
+<CotaTVA>${rowData["cota tva"]}</CotaTVA>
+<TVA>${rowData["valoare tva"]}</TVA>
+<Cont>${$("#cont").val()}</Cont>
+</Linie>`;
+	fac += linie;
+    });
+
+	fac += `</Continut>
+</Detalii>
+
+</Factura>
+</Facturi>`
+
+    console.log("All Values and Table:");
+    console.log("Tip Articole:", $("#tipArticole").val());
+    console.log("Furnizor:", $("#furnizor").val());
+    console.log("Data Eliberare:", $("#dataEliberare").val());
+    console.log("Numar Factura:", $("#numarFactura").val());
+    console.log("Cod Gestiune:", $("#codGestiune").val());
+    console.log("Nr de articole:", $("#nrArticole").val());
+    console.log("Table Data:", tableData);
+
+	// Download XML
+  let blob = new Blob([fac], { type: 'application/xml' });
+  let link = document.createElement("a");
+  link.href = window.URL.createObjectURL(blob);
+  link.download = "f_intrare.xml";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  });
+});
+
+
+  </script>
+
+</body>
+</html>
+
