@@ -20,9 +20,20 @@
         justify-content: space-between;
         margin-bottom: 10px;
     }
+
+/* General style, applies to all widths */
+body {
+  margin: 0;
+}
+	@media screen and (min-width: 701px) {
+  body {
+    margin: 0 10%;
+  }
+}
+
 </style>
 </head>
-<body>
+<body >
 
 <h2>Extract any JSON format from any image with AI</h2>
 <p>Indicate the fields you want to extract, the description, RapidAPI API key, and upload images you want to process</p>
@@ -71,8 +82,8 @@
 </table>
 
 
-<button id="loadSchema">Load Schema</button>
-<button id="saveSchema">Save Schema</button>
+<button id="loadSchema1" onclick="readschema();">Load Schema</button>
+<button id="saveSchema1"  onclick="saveschema();">Save Schema</button>
 
  
 
@@ -175,6 +186,64 @@ function checkIfOnlyImages(fileList) {
     }
   }
   return true;
+}
+
+
+// Function to read text from a .txt file
+function readTextFile(fileInput) {
+  const file = fileInput.files[0];
+  if (file && file.type === 'text/plain') {
+    const reader = new FileReader();
+    reader.readAsText(file);
+    reader.onload = function(event) {
+      const fileContent = event.target.result;
+      console.log('File content:', fileContent);
+      // You can use fileContent here
+	$("#fieldsTable tbody").html(fileContent);
+    };
+    reader.onerror = function(error) {
+      console.error('Error reading file:', error);
+    };
+  } else {
+    alert('Please upload a .txt file.');
+  }
+}
+
+function saveschema(){
+	var text = $("#fieldsTable tbody").html();
+	// Create a Blob with the text
+  const blob = new Blob([text], { type: 'text/plain' });
+  
+  // Create a URL for the Blob
+  const blobURL = window.URL.createObjectURL(blob);
+
+  // Create an anchor element for the download
+  const a = document.createElement('a');
+  a.href = blobURL;
+  a.download = 'schema.txt'; // The file name for download
+
+  // Trigger the download
+  document.body.appendChild(a);
+  a.click();
+  
+  // Cleanup
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(blobURL);
+}
+
+function readschema(){
+	// Usage
+	//const fileInput = document.getElementById('textFileInput');  // Replace with your actual file input element ID
+	var input = document.createElement('input');
+        input.type = 'file';
+        input.name = 'file[]'
+        input.next = 'list'
+        input.multiple = true;
+        input.click();
+
+	input.addEventListener('change', function() {
+	  readTextFile(this);
+	});
 }
 
   function updateFileList() {
